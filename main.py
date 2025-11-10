@@ -16,9 +16,11 @@ from langchain_community.utilities import SerpAPIWrapper
 from bs4 import BeautifulSoup
 from web3 import Web3
 
+from github import aggregate_github_project
 
 
-load_dotenv()
+
+load_dotenv(override=True)
 model = "google/gemini-2.5-flash-lite-preview-09-2025"
 url = 'https://openrouter.ai/api/v1'
 TEMPERATURE = 0.4
@@ -26,6 +28,7 @@ MAX_TOKENS = 600000
 os.environ["HTTP_PROXY"] = "http://127.0.0.1:7890"
 os.environ["HTTPS_PROXY"] = "http://127.0.0.1:7890"
 ETHERSCAN_API_KEY = os.getenv("ETHERSCAN_API_KEY")
+GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
 
 class BackgroundCheckAgent:
     def __init__(self, openai_api_key: str, serp_api_key: Optional[str] = None):
@@ -33,7 +36,7 @@ class BackgroundCheckAgent:
         self.openai_api_key = openai_api_key
         self.serp_api_key = serp_api_key
         
-        # client = httpx.Client(proxies="http://127.0.0.1:7890")
+        # client = httpx.Client(proxy="http://127.0.0.1:7890")
 
         # 初始化LLM
         self.llm = ChatOpenAI(
@@ -67,11 +70,11 @@ class BackgroundCheckAgent:
                 func=self._search_company_info,
                 description="在Google搜索公司信息。输入：公司名称和地区，输出：公司简介"
             ),
-            Tool(
-                name="scrape_linkedin",
-                func=self._scrape_linkedin,
-                description="获取LinkedIn上的团队信息。输入：LinkedIn公司页面URL，输出：团队成员列表"
-            ),
+            # Tool(
+            #     name="scrape_linkedin",
+            #     func=self._scrape_linkedin,
+            #     description="获取LinkedIn上的团队信息。输入：LinkedIn公司页面URL，输出：团队成员列表"
+            # ),
             Tool(
                 name="scrape_twitter",
                 func=self._scrape_twitter,
@@ -80,7 +83,7 @@ class BackgroundCheckAgent:
             Tool(
                 name="check_github_repo",
                 func=self._check_github_repo,
-                description="检查GitHub仓库所有权。输入：项目名称，输出：仓库所有者信息"
+                description="检查GitHub仓库所有权。输入：github repo owner和repo name，输出：仓库所有者信息和贡献者信息"
             ),
             Tool(
                 name="check_token_contract",
@@ -162,36 +165,40 @@ class BackgroundCheckAgent:
             search = DuckDuckGoSearchAPIWrapper()
             return search.run(query)
     
-    def _scrape_linkedin(self, url: str) -> str:
-        """获取LinkedIn信息（需要处理登录限制）"""
-        # LinkedIn有反爬虫机制，需要用官方API或第三方服务
-        return "LinkedIn scraping requires authentication. Please use LinkedIn API or manual review."
+    # def _scrape_linkedin(self, url: str) -> str:
+    #     """获取LinkedIn信息（需要处理登录限制）"""
+    #     # LinkedIn有反爬虫机制，需要用官方API或第三方服务
+    #     return "LinkedIn scraping requires authentication. Please use LinkedIn API or manual review."
     
     def _scrape_twitter(self, handle: str) -> str:
         """获取Twitter信息"""
         # 需要使用Twitter API V2
         return f"To get Twitter data for @{handle}, please use Twitter API v2 with proper authentication."
     
-    def _check_github_repo(self, project_name: str) -> str:
+    def _check_github_repo(self, github_repo_owner: str, github_repo_name: str) -> str:
         """检查GitHub仓库"""
-        try:
-            api_url = f"https://api.github.com/search/repositories?q={project_name}"
-            headers = {'Accept': 'application/vnd.github.v3+json'}
+        data = aggregate_github_project(github_repo_owner, github_repo_name, token=GITHUB_TOKEN)
+        with open("github_project_data.json", "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=2, ensure_ascii=False)
+        return data
+        # try:
+        #     api_url = f"https://api.github.com/search/repositories?q={project_name}"
+        #     headers = {'Accept': 'application/vnd.github.v3+json'}
             
-            response = requests.get(api_url, headers=headers)
-            if response.status_code == 200:
-                data = response.json()
-                if data['items']:
-                    repo = data['items'][0]
-                    return json.dumps({
-                        'name': repo['name'],
-                        'owner': repo['owner']['login'],
-                        'created_at': repo['created_at'],
-                        'url': repo['html_url']
-                    }, indent=2)
-            return "No repository found"
-        except Exception as e:
-            return f"Error: {str(e)}"
+        #     response = requests.get(api_url, headers=headers)
+        #     if response.status_code == 200:
+        #         data = response.json()
+        #         if data['items']:
+        #             repo = data['items'][0]
+        #             return json.dumps({
+        #                 'name': repo['name'],
+        #                 'owner': repo['owner']['login'],
+        #                 'created_at': repo['created_at'],
+        #                 'url': repo['html_url']
+        #             }, indent=2)
+        #     return "No repository found"
+        # except Exception as e:
+        #     return f"Error: {str(e)}"
     
     def _check_token_contract(self, contract_info: str) -> str:
         """检查Token合约创建时间"""
@@ -446,7 +453,8 @@ if __name__ == "__main__":
         'website': 'https://www.kerberus.com/',
         'linkedin': 'https://www.linkedin.com/company/kerberus-inc',
         'twitter': 'https://x.com/Kerberus',
-        'github_repo_name': 'projectkerberus/terraform-kerberus-crossplane',
+        'github_repo_owner': 'projectkerberus',
+        'github_repo_name': 'terraform-kerberus-crossplane',
         'token_symbol': 'Kerberus',
         'contract_address': '0x38B145C0C028DCf9B1D856687E72034c33444444,bsc',  # 实际合约地址
         'network': 'bsc'
