@@ -1,0 +1,37 @@
+{
+  "repository": {
+    "name": "resolv-contracts-public",
+    "full_name": "resolv-im/resolv-contracts-public",
+    "owner": "resolv-im",
+    "description": null,
+    "language": "Solidity",
+    "topics": [],
+    "stars": 7,
+    "forks": 4,
+    "watchers": 7,
+    "license": null,
+    "created_at": "2024-06-04T16:19:20Z",
+    "updated_at": "2025-09-27T22:15:55Z",
+    "pushed_at": "2025-01-15T14:22:56Z",
+    "html_url": "https://github.com/resolv-im/resolv-contracts-public"
+  },
+  "contributors": [
+    {
+      "profile": {
+        "login": "resolv-labs",
+        "name": null,
+        "company": null,
+        "location": null,
+        "bio": null,
+        "followers": 1,
+        "following": 0,
+        "public_repos": 0,
+        "created_at": "2024-06-04T16:14:30Z",
+        "updated_at": "2025-03-14T11:31:38Z",
+        "html_url": "https://github.com/resolv-labs"
+      },
+      "contributions": 11,
+      "repos": []
+    }
+  ]
+}
